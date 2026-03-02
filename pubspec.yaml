@@ -1,0 +1,93 @@
+name: samsung_gallery_clone
+description: Samsung-level Android Gallery App Clone
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── State Management ─────────────────────────────────────────────
+  get: ^4.7.3                         # GetX: state, routes, DI
+  http: ^1.6.0
+
+  # ── Storage / Media Access ───────────────────────────────────────
+  photo_manager: ^3.8.3              # Access device photos/videos
+  permission_handler: ^12.0.0         # Runtime permission handling
+
+  # ── Image & Thumbnail ────────────────────────────────────────────
+  cached_network_image: ^3.4.1        # Cache remote images
+  flutter_cache_manager: ^3.4.1       # Custom cache manager
+  image: ^4.8.0                       # Dart image processing
+  image_gallery_saver: ^2.0.3         # Save edited images
+
+  # ── AI / ML (on-device) ──────────────────────────────────────────
+  google_mlkit_face_detection: ^0.13.2
+  google_mlkit_text_recognition: ^0.15.1
+  google_mlkit_image_labeling: ^0.14.2
+
+  # ── Editing ──────────────────────────────────────────────────────
+  image_editor_plus: ^1.0.8           # Crop, rotate, draw
+  video_player: ^2.10.1               # Video playback
+  video_thumbnail: ^0.5.6             # Generate video thumbnails
+  ffmpeg_kit_flutter_min: ^6.0.3      # Video trim, audio mute
+
+  # ── Secure Folder ────────────────────────────────────────────────
+  local_auth: ^3.0.1                  # Biometric authentication
+  flutter_secure_storage: ^10.0.0      # Encrypted key-value storage
+  encrypt: ^5.0.3                     # AES encryption for files
+
+  # ── Maps / EXIF ──────────────────────────────────────────────────
+  flutter_map: ^8.2.2                 # OpenStreetMap (free, offline)
+  latlong2: ^0.9.1                    # GPS coordinate models
+  native_exif: ^0.7.0                 # Read EXIF data from images
+
+  # ── Google Photos Sync ───────────────────────────────────────────
+  googleapis: ^16.0.0                 # Google Photos API client
+  google_sign_in: ^7.2.0              # OAuth for Google
+  workmanager: ^0.9.0+3               # Background task scheduling
+  googleapis_auth: ^2.0.0
+  mime: ^2.0.0
+  extension_google_sign_in_as_googleapis_auth: ^3.0.0
+
+  # ── UI Helpers ───────────────────────────────────────────────────
+  flutter_staggered_grid_view: ^0.7.0 # Masonry/grid layout
+  photo_view: ^0.15.0                 # Pinch-zoom image viewer
+  scrollable_positioned_list: ^0.3.8  # Jump to index in list
+  shimmer: ^3.0.0                     # Loading skeleton shimmer
+  lottie: ^3.3.2                      # Lottie animations
+  share_plus: ^12.0.1                 # Native share intent
+  path_provider: ^2.1.5               # App directories
+  path: ^1.9.1                        # Path utilities
+  intl: ^0.20.2                       # Date formatting
+  collection: ^1.19.1                 # List utilities (groupBy)
+  crypto: ^3.0.7                      # SHA/MD5 for dedup
+  uuid: ^4.5.3                        # Generate unique IDs
+  rxdart: ^0.28.0                     # Stream utilities
+  connectivity_plus: ^7.0.0           # Network state detection
+  device_info_plus: ^12.3.0           # Device information
+  package_info_plus: ^9.0.0           # App version info
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.11.1
+  mockito: ^5.6.3
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: SamsungSans
+      fonts:
+        - asset: assets/fonts/SamsungSans-Regular.ttf
+        - asset: assets/fonts/SamsungSans-Bold.ttf
+          weight: 700
