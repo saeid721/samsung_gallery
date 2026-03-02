@@ -7,7 +7,7 @@ import Foundation
 
 import connectivity_plus
 import device_info_plus
-import ffmpeg_kit_flutter_min
+import ffmpeg_kit_flutter_new
 import file_selector_macos
 import flutter_secure_storage_darwin
 import google_sign_in_ios

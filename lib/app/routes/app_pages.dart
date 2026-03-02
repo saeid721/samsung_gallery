@@ -6,12 +6,13 @@ import '../../features/duplicates_view/duplicates_view.dart';
 import '../../features/editor/editor_view.dart';
 import '../../features/gallery/views/gallery_view.dart';
 import '../../features/media_viewer_view/media_viewer_view.dart';
-import '../../features/memories_view/story_view.dart';
+//import '../../features/memories_view/story_view.dart';
 import '../../features/people_view/people_view.dart';
 import '../../features/search/search_view.dart';
 import '../../features/secure_folder_view/secure_folder_view.dart';
 
 // Bindings (lazy DI per route)
+import '../../features/story/story_view.dart';
 import '../../features/sync_settings_view/sync_settings_view.dart';
 import '../../features/trash_view/trash_view.dart';
 import '../bindings/editor_binding.dart';
@@ -40,12 +41,12 @@ abstract class AppPages {
 
   // ── Route definitions with lazy bindings ────────────────
   static final routes = [
-    GetPage(
-      name: gallery,
-      page: () => const GalleryView(),
-      binding: GalleryBinding(),
-      transition: Transition.fadeIn,
-    ),
+    // GetPage(
+    //   name: gallery,
+    //   page: () => const GalleryView(),
+    //   binding: GalleryBinding(),
+    //   transition: Transition.fadeIn,
+    // ),
     GetPage(
       name: albums,
       page: () => const AlbumsView(),
@@ -79,7 +80,7 @@ abstract class AppPages {
     ),
     GetPage(
       name: memories,
-      page: () => const MemoriesView(),
+      page: () => const StoryView(),
       transition: Transition.fadeIn,
     ),
     GetPage(

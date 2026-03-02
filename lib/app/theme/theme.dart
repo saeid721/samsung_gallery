@@ -17,6 +17,22 @@ abstract class AppColors {
   static const onSurfaceDark = Color(0xFFE6E1E5);
   static const error = Color(0xFFBA1A1A);
   static const success = Color(0xFF2E7D32);
+
+  // Shimmer loading
+  static const Color shimmerBase = Color(0xFFE0E0E0);
+  static const Color shimmerHighlight = Color(0xFFF5F5F5);
+
+  // Text
+  static const Color textPrimary = Color(0xFF1F1F1F);
+  static const Color textSecondary = Color(0xFF757575);
+
+  // Badges & Overlays
+  static const Color videoBadge = Color(0xCC000000);
+  static const Color gifBadge = Color(0xFF9C27B0);
+
+  // Selection
+  static const Color selectionOverlay = Color(0x4D1a73e8);
+  static const Color selectionBorder = Color(0xFF1a73e8);
 }
 
 abstract class AppTheme {

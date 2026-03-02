@@ -1,25 +1,6 @@
-// ============================================================
-// features/gallery/controllers/gallery_controller.dart
-// ============================================================
-// GetX Controller for the main gallery/timeline screen.
-//
-// RESPONSIBILITIES:
-//   • Request storage permissions on first launch
-//   • Load & group media items into timeline sections
-//   • Handle multi-selection mode
-//   • Coordinate trash, favorite, move operations
-//   • Expose reactive observables (Rx*) for UI to watch
-//
-// PATTERN: Controller owns observable state; Repository owns data.
-// UI never talks to repository directly.
-// ============================================================
-
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:photo_manager/photo_manager.dart';
-
 import '../../../core/services/ai_pipeline_service.dart';
 import '../../../data/models/media_model.dart';
 import '../../../data/repositories/media_repository.dart';
@@ -30,48 +11,35 @@ class GalleryController extends GetxController {
   final AiPipelineService _aiService = Get.find<AiPipelineService>();
 
   // ── Observable State ────────────────────────────────────────
-  // Rx<T> = reactive wrapper; UI rebuilds when value changes
-
   final RxBool isLoading = true.obs;
   final RxBool hasPermission = false.obs;
   final RxBool isSelectionMode = false.obs;
-
-  /// Grouped timeline sections (Today, Yesterday, Month…)
   final RxList<TimelineGroup> timelineGroups = <TimelineGroup>[].obs;
-
-  /// Currently selected asset IDs in selection mode
   final RxSet<String> selectedIds = <String>{}.obs;
-
-  /// Current scroll position for restoring after navigation
   final RxInt scrollOffset = 0.obs;
-
-  /// Error message if permission denied or IO error
   final RxString errorMessage = ''.obs;
 
   // ── Lifecycle ────────────────────────────────────────────────
+  StreamSubscription? _timelineSubscription;
+  List<String>? _lastTrashedIds; // Moved here for proper scope
 
   @override
   void onInit() {
     super.onInit();
-    // Kick off permission check + load immediately
     _initialize();
   }
 
   @override
   void onClose() {
-    // Cancel any active streams to prevent memory leaks
-    _timelineSubscription?.cancel();
+    _timelineSubscription?.cancel(); // Safe null-aware cancellation
     super.onClose();
   }
 
   // ── Internal ─────────────────────────────────────────────────
-
-  StreamSubscription? _timelineSubscription;
-
   Future<void> _initialize() async {
     isLoading.value = true;
+    errorMessage.value = '';
 
-    // 1. Check / request permission
     hasPermission.value = await _mediaRepo.requestPermission();
     if (!hasPermission.value) {
       isLoading.value = false;
@@ -79,10 +47,11 @@ class GalleryController extends GetxController {
       return;
     }
 
-    // 2. Subscribe to timeline stream (emits cached, then fresh data)
+    _timelineSubscription?.cancel(); // Cancel previous if any
     _timelineSubscription = _mediaRepo.getTimelineStream().listen(
           (groups) {
-        timelineGroups.assignAll(groups);
+        // Cast to ensure type compatibility
+        timelineGroups.assignAll(groups as Iterable<TimelineGroup>);
         isLoading.value = false;
       },
       onError: (e) {
@@ -92,18 +61,16 @@ class GalleryController extends GetxController {
     );
   }
 
-  // ── Public Actions (called by UI widgets) ───────────────────
-
-  /// Refresh gallery (e.g., pull-to-refresh)
+  // ── Public Actions ───────────────────────────────────────────
   Future<void> refresh() async {
     isLoading.value = true;
     await _initialize();
   }
 
   // ── Selection Mode ──────────────────────────────────────────
-
   void enterSelectionMode(String firstSelectedId) {
     isSelectionMode.value = true;
+    selectedIds.clear();
     selectedIds.add(firstSelectedId);
   }
 
@@ -130,19 +97,21 @@ class GalleryController extends GetxController {
   }
 
   // ── Media Operations ────────────────────────────────────────
-
   Future<void> trashSelected() async {
     if (selectedIds.isEmpty) return;
 
-    await _mediaRepo.trashItems(selectedIds.toList());
+    // Save IDs for undo BEFORE removing from UI
+    _lastTrashedIds = selectedIds.toList();
 
-    // Remove from UI immediately (optimistic update)
+    await _mediaRepo.trashItems(_lastTrashedIds!);
+
+    // Optimistic UI update
     _removeItemsFromTimeline(selectedIds.toSet());
     exitSelectionMode();
 
     Get.snackbar(
       'Moved to Trash',
-      '${selectedIds.length} item(s) will be deleted after 30 days',
+      '${_lastTrashedIds!.length} item(s) will be deleted after 30 days',
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 3),
       mainButton: TextButton(
@@ -152,13 +121,11 @@ class GalleryController extends GetxController {
     );
   }
 
-  List<String>? _lastTrashedIds;
-
   void _undoLastTrash() {
-    if (_lastTrashedIds != null) {
+    if (_lastTrashedIds != null && _lastTrashedIds!.isNotEmpty) {
       _mediaRepo.restoreFromTrash(_lastTrashedIds!);
-      refresh(); // Reload timeline to show restored items
       _lastTrashedIds = null;
+      refresh(); // Reload to show restored items
     }
   }
 
@@ -179,31 +146,24 @@ class GalleryController extends GetxController {
   }
 
   // ── AI Triggers ─────────────────────────────────────────────
-
-  /// Start face grouping analysis in background isolate
   Future<void> startFaceGrouping() async {
     final allItems = timelineGroups.expand((g) => g.items).toList();
-    // Runs in compute() isolate — won't block UI thread
     await _aiService.clusterFaces(allItems);
-    // Result is saved to secure_folder_view storage and exposed via FaceController
   }
 
   // ── Private Helpers ─────────────────────────────────────────
-
   void _removeItemsFromTimeline(Set<String> ids) {
     for (var group in timelineGroups) {
       group.items.removeWhere((item) => ids.contains(item.id));
     }
-    // Remove empty groups
     timelineGroups.removeWhere((g) => g.items.isEmpty);
-    timelineGroups.refresh(); // Force Obx rebuild
+    timelineGroups.refresh(); // Force reactive rebuild
   }
 
   MediaItem? _findItem(String id) {
     for (final group in timelineGroups) {
-      try {
-        return group.items.firstWhere((item) => item.id == id);
-      } catch (_) {}
+      final match = group.items.firstWhere((item) => item.id == id, orElse: () => null as MediaItem);
+      if (match != null) return match;
     }
     return null;
   }
