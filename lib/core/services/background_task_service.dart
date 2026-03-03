@@ -38,7 +38,7 @@ class BackgroundTaskService {
   }
 
   // ----------------------------------------------------------
-  // SYNC TASK HANDLER (called from callbackDispatcher in main.dart)
+  // SYNC TASK HANDLER (called from callbackDispatcher in env.dart)
   // This runs in a background isolate — no Flutter widgets available
   // ----------------------------------------------------------
   static Future<bool> runSyncTask(Map<String, dynamic>? inputData) async {

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:workmanager/workmanager.dart';
 import 'app/bindings/init_binding.dart';
+import 'app/env.dart';
 import 'app/routes/app_pages.dart';
 import 'app/theme/theme.dart';
 import 'core/config/app_config.dart';
