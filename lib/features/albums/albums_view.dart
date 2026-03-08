@@ -1,4 +1,5 @@
 
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -38,13 +39,21 @@ class AlbumsView extends GetView<AlbumsController> {
         }
 
         if (controller.albums.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_open, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No albums found', style: TextStyle(color: Colors.grey)),
+                Icon(Icons.folder_open, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'No albums found',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create your first album to get started',
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                ),
               ],
             ),
           );
@@ -58,7 +67,7 @@ class AlbumsView extends GetView<AlbumsController> {
               crossAxisCount: 2,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              childAspectRatio: 0.85, // Slightly taller than square for label
+              childAspectRatio: 0.85,
             ),
             itemCount: controller.albums.length,
             itemBuilder: (context, index) {
@@ -151,13 +160,26 @@ class _AlbumCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: album.coverAssetId != null
                         ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: _AssetThumbnail(assetId: album.coverAssetId!),
-                    )
-                        : const Icon(Icons.folder, size: 48, color: Colors.grey),
+                          borderRadius: BorderRadius.circular(12),
+                          child: _AssetThumbnail(assetId: album.coverAssetId!),
+                        )
+                        : Center(
+                          child: Icon(
+                            Icons.folder,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
                   ),
                   // Selection overlay
                   if (controller.isSelectionMode.value)
@@ -179,23 +201,33 @@ class _AlbumCard extends StatelessWidget {
                           ),
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check, size: 14, color: Colors.white)
+                            ? const Icon(
+                              Icons.check,
+                              size: 14,
+                              color: Colors.white,
+                            )
                             : null,
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               album.name,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              '${album.itemCount}',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              '${album.itemCount} ${album.itemCount == 1 ? 'photo' : 'photos'}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
             ),
           ],
         );
@@ -211,19 +243,59 @@ class _AssetThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
+    return FutureBuilder<Uint8List?>(
       future: _loadThumb(),
       builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return Image.memory(snapshot.data!, fit: BoxFit.cover);
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            color: Colors.grey.shade200,
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
         }
-        return Container(color: Colors.grey.shade200);
+
+        if (snapshot.hasError) {
+          return Container(
+            color: Colors.grey.shade300,
+            child: Icon(Icons.broken_image, color: Colors.grey.shade600),
+          );
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          return Image.memory(
+            snapshot.data!,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+          );
+        }
+
+        return Container(
+          color: Colors.grey.shade200,
+          child: Icon(Icons.image, color: Colors.grey.shade500),
+        );
       },
     );
   }
 
-  Future<dynamic> _loadThumb() async {
-    final asset = await AssetEntity.fromId(assetId);
-    return asset?.thumbnailDataWithSize(const ThumbnailSize(256, 256));
+  Future<Uint8List?> _loadThumb() async {
+    try {
+      final asset = await AssetEntity.fromId(assetId);
+      if (asset == null) return null;
+
+      // Load thumbnail with appropriate size for album covers
+      final thumbnail = await asset.thumbnailDataWithSize(
+        const ThumbnailSize(300, 300),
+        format: ThumbnailFormat.jpeg,
+      );
+      return thumbnail;
+    } catch (e) {
+      debugPrint('Error loading thumbnail for $assetId: $e');
+      return null;
+    }
   }
 }

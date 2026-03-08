@@ -22,91 +22,107 @@ class GalleryView extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: GetBuilder<GalleryController>(
-          builder: (_) {
-            final selectedCount = controller.selectedIds.length;
-            final allCount = controller.timelineGroups
-                .fold<int>(0, (sum, g) => sum + g.items.length);
+        child: Obx(() {
+          final selectedCount = controller.selectedIds.length;
+          final allCount = controller.timelineGroups
+              .fold<int>(0, (sum, g) => sum + g.items.length);
 
-            return AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          return AppBar(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (controller.isSelectionMode.value)
+                  Text('$selectedCount / $allCount selected', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16))
+                else
+                  const Text('Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
+            actions: [
+              Row(
                 children: [
-                  Text('Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+                  if (!controller.isSelectionMode.value)
+                    IconButton(
+                      icon: const Icon(Icons.search, color: Colors.grey),
+                      onPressed: () => Get.toNamed(AppPages.search),
+                    ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    color: AppColors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) => _handleAction(value, controller),
+                    itemBuilder: (_) => [
+                      _buildPopupItem(
+                          icon: Icons.favorite_border,
+                          label: 'Add to Favorites',
+                          value: 'favorite',
+                          enabled: selectedCount > 0),
+                      _buildPopupItem(
+                          icon: Icons.folder_outlined,
+                          label: 'Move to Album',
+                          value: 'move',
+                          enabled: selectedCount > 0),
+                      const PopupMenuDivider(),
+                      _buildPopupItem(
+                          icon: Icons.delete_outline,
+                          label: 'Move to Trash',
+                          value: 'trash',
+                          enabled: selectedCount > 0,
+                          isDestructive: true),
+                    ],
+                  ),
                 ],
               ),
-              actions: [
-                Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.grey),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, color: Colors.grey),
-                      color: AppColors.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      onSelected: (value) => _handleAction(value, controller),
-                      itemBuilder: (_) => [
-                        _buildPopupItem(
-                            icon: Icons.favorite_border,
-                            label: 'Add to Favorites',
-                            value: 'favorite',
-                            enabled: selectedCount > 0),
-                        _buildPopupItem(
-                            icon: Icons.folder_outlined,
-                            label: 'Move to Album',
-                            value: 'move',
-                            enabled: selectedCount > 0),
-                        const PopupMenuDivider(),
-                        _buildPopupItem(
-                            icon: Icons.delete_outline,
-                            label: 'Move to Trash',
-                            value: 'trash',
-                            enabled: selectedCount > 0,
-                            isDestructive: true),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
+            ],
+          );
+        }),
       ),
       bottomNavigationBar: const AppBottomNav(),
-      body: GetBuilder<GalleryController>(
-        builder: (_) {
-          if (!controller.hasPermission.value) {
-            return _PermissionDenied(onRetry: controller.refresh);
-          }
+      body: Obx(() {
+        if (!controller.hasPermission.value) {
+          return _PermissionDenied(onRetry: controller.refresh);
+        }
 
-          if (controller.isLoading.value && controller.timelineGroups.isEmpty) {
-            return const _LoadingShimmer();
-          }
+        if (controller.isLoading.value && controller.timelineGroups.isEmpty) {
+          return const _LoadingShimmer();
+        }
 
-          // Flatten all media items into a single list
-          final allItems = controller.timelineGroups.expand((g) => g.items).toList();
+        // Flatten all media items into a single list
+        final allItems = controller.timelineGroups.expand((g) => g.items).toList();
 
-          return RefreshIndicator(
-            onRefresh: controller.refresh,
-            child: GridView.builder(
-              padding: const EdgeInsets.all(2),
-              physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics()),
-              itemCount: allItems.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 2,
-                crossAxisSpacing: 2,
-              ),
-              itemBuilder: (context, index) {
-                final item = allItems[index];
-                return _MediaCell(item: item, controller: controller);
-              },
+        if (allItems.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No photos found', style: TextStyle(color: Colors.grey)),
+              ],
             ),
           );
-        },
-      ),
+        }
+
+        return RefreshIndicator(
+          onRefresh: controller.refresh,
+          child: GridView.builder(
+            padding: const EdgeInsets.all(2),
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            itemCount: allItems.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+            ),
+            itemBuilder: (context, index) {
+              final item = allItems[index];
+              return _MediaCell(item: item, controller: controller);
+            },
+          ),
+        );
+      }),
     );
   }
 
@@ -188,7 +204,6 @@ class _MediaCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = controller.selectedIds.contains(item.id);
     return GestureDetector(
       onTap: () {
         if (controller.isSelectionMode.value) {
@@ -196,20 +211,21 @@ class _MediaCell extends StatelessWidget {
         } else {
           Get.toNamed(AppPages.viewer, arguments: {'mediaItem': item});
         }
-        controller.update();
       },
       onLongPress: () {
         if (!controller.isSelectionMode.value) {
           controller.enterSelectionMode(item.id);
         }
-        controller.update();
       },
-      child: Stack(fit: StackFit.expand, children: [
-        MediaThumbnailWidget(item: item),
-        if (item.type == MediaType.video) _VideoBadge(duration: item.duration),
-        if (item.mimeType == 'image/gif') const _GifBadge(),
-        if (controller.isSelectionMode.value) _SelectionOverlay(isSelected: isSelected),
-      ]),
+      child: Obx(() {
+        final isSelected = controller.selectedIds.contains(item.id);
+        return Stack(fit: StackFit.expand, children: [
+          MediaThumbnailWidget(item: item),
+          if (item.type == MediaType.video) _VideoBadge(duration: item.duration),
+          if (item.mimeType == 'image/gif') const _GifBadge(),
+          if (controller.isSelectionMode.value) _SelectionOverlay(isSelected: isSelected),
+        ]);
+      }),
     );
   }
 }
