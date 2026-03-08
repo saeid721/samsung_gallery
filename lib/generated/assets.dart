@@ -7,14 +7,12 @@ import 'package:lottie/src/composition.dart';
 
 class Assets {
   Assets._();
-
 }
 
 class AssetGenImage {
   const AssetGenImage(this._assetName, {this.size, this.flavors = const {}});
 
   final String _assetName;
-
 
   final Size? size;
   final Set<String> flavors;
@@ -72,15 +70,8 @@ class AssetGenImage {
     );
   }
 
-  ImageProvider provider({
-    AssetBundle? bundle,
-    String? package,
-  }) {
-    return AssetImage(
-      _assetName,
-      bundle: bundle,
-      package: package,
-    );
+  ImageProvider provider({AssetBundle? bundle, String? package}) {
+    return AssetImage(_assetName, bundle: bundle, package: package);
   }
 
   Widget custom({
@@ -102,7 +93,6 @@ class SvgGenImage {
   const SvgGenImage(this._assetName);
 
   final String _assetName;
-
 
   Widget custom({
     Key? key,

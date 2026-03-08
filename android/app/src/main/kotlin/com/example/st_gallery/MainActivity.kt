@@ -1,4 +1,4 @@
-package com.example.samsung_gallery
+package com.example.st_gallery
 
 import io.flutter.embedding.android.FlutterActivity
 

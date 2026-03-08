@@ -1,6 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:photo_manager/photo_manager.dart';
 import '../../../data/models/media_model.dart';
 import '../../../app/theme/theme.dart';
@@ -68,19 +67,27 @@ class _ImageThumbnail extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Cached network image or local file
-          // if (item.thumbnailPath != null && item.thumbnailPath!.isNotEmpty)
-          //   CachedNetworkImage(
-          //     imageUrl: item.thumbnailPath!,
-          //     width: width,
-          //     height: height,
-          //     fit: fit,
-          //     placeholder: (context, url) => _ShimmerPlaceholder(),
-          //     errorWidget: (context, url, error) => _ErrorPlaceholder(),
-          //     memCacheWidth: 200, // Optimize memory usage
-          //   )
-          // else
-          //   _ErrorPlaceholder(),
+          // Load thumbnail from phone storage
+          FutureBuilder<Uint8List?>(
+            future: _loadThumbnail(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _ShimmerPlaceholder();
+              }
+
+              if (snapshot.hasData && snapshot.data != null) {
+                return Image.memory(
+                  snapshot.data!,
+                  width: width,
+                  height: height,
+                  fit: fit,
+                  gaplessPlayback: true,
+                );
+              }
+
+              return _ErrorPlaceholder();
+            },
+          ),
 
           // Favorite badge (Samsung-style heart)
           if (item.isFavorite.value)
@@ -122,6 +129,26 @@ class _ImageThumbnail extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<Uint8List?> _loadThumbnail() async {
+    try {
+      // Use photo_manager to load thumbnail directly
+      final asset = await AssetEntity.fromId(item.id);
+      if (asset == null) return null;
+
+      // Get thumbnail as bytes with appropriate size
+      final bytes = await asset.thumbnailDataWithSize(
+        const ThumbnailSize(256, 256),
+        format: ThumbnailFormat.jpeg,
+        quality: 85,
+      );
+
+      return bytes;
+    } catch (e) {
+      debugPrint('Error loading thumbnail for ${item.id}: $e');
+      return null;
+    }
   }
 }
 

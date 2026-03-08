@@ -11,8 +11,8 @@ import '../../../data/repositories/face_recognition_service.dart';
 import '../../../data/repositories/media_repository.dart';
 
 class PeopleController extends GetxController {
-  final FaceRecognitionService _faceService = Get.find<FaceRecognitionService>();
-  final AiPipelineService      _aiService   = Get.find<AiPipelineService>();
+  // final FaceRecognitionService _faceService = Get.find<FaceRecognitionService>();
+  // final AiPipelineService      _aiService   = Get.find<AiPipelineService>();
   final MediaRepository        _mediaRepo   = Get.find<MediaRepository>();
   final SecureStorageService   _storage     = Get.find<SecureStorageService>();
   final _uuid = const Uuid();
@@ -37,11 +37,11 @@ class PeopleController extends GetxController {
     _loadClusters();
   }
 
-  @override
-  void onClose() {
-    _faceService.dispose();
-    super.onClose();
-  }
+  // @override
+  // void onClose() {
+  //   _faceService.dispose();
+  //   super.onClose();
+  // }
 
   // ── Load persisted clusters ───────────────────────────────────
 
@@ -110,53 +110,53 @@ class PeopleController extends GetxController {
       int processed = 0;
 
       // 3. Process each image via FaceRecognitionService
-      for (final item in allItems) {
-        final faces = await _faceService.detectFaces(item.id);
-
-        for (final face in faces) {
-          if (!face.isFrontal) continue; // Skip profile faces
-
-          // Try to assign to an existing cluster
-          bool assigned = false;
-          for (int i = 0; i < currentClusters.length; i++) {
-            final similarity = FaceRecognitionService.cosineSimilarity(
-              currentClusters[i].centroidEmbedding,
-              face.embedding,
-            );
-
-            if (similarity > 0.6) {
-              // Assign to this cluster
-              currentClusters[i] =
-                  currentClusters[i].addPhoto(item.id, face.embedding);
-              await _persistCluster(currentClusters[i]);
-              assigned = true;
-              break;
-            }
-          }
-
-          // No matching cluster — create a new one
-          if (!assigned) {
-            final newCluster = FaceCluster.fromFirstPhoto(
-              clusterId: _uuid.v4(),
-              assetId: item.id,
-              embedding: face.embedding,
-            );
-            currentClusters.add(newCluster);
-            await _persistCluster(newCluster);
-          }
-        }
-
-        processed++;
-        scanProgress.value = processed / total;
-        scanStatus.value =
-        'Scanning ${processed} of ${total} photos…';
-
-        // Yield to UI every 20 items to prevent ANR
-        if (processed % 20 == 0) {
-          clusters.assignAll(currentClusters);
-          await Future.delayed(Duration.zero);
-        }
-      }
+      // for (final item in allItems) {
+      //   final faces = await _faceService.detectFaces(item.id);
+      //
+      //   for (final face in faces) {
+      //     if (!face.isFrontal) continue; // Skip profile faces
+      //
+      //     // Try to assign to an existing cluster
+      //     bool assigned = false;
+      //     for (int i = 0; i < currentClusters.length; i++) {
+      //       final similarity = FaceRecognitionService.cosineSimilarity(
+      //         currentClusters[i].centroidEmbedding,
+      //         face.embedding,
+      //       );
+      //
+      //       if (similarity > 0.6) {
+      //         // Assign to this cluster
+      //         currentClusters[i] =
+      //             currentClusters[i].addPhoto(item.id, face.embedding);
+      //         await _persistCluster(currentClusters[i]);
+      //         assigned = true;
+      //         break;
+      //       }
+      //     }
+      //
+      //     // No matching cluster — create a new one
+      //     if (!assigned) {
+      //       final newCluster = FaceCluster.fromFirstPhoto(
+      //         clusterId: _uuid.v4(),
+      //         assetId: item.id,
+      //         embedding: face.embedding,
+      //       );
+      //       currentClusters.add(newCluster);
+      //       await _persistCluster(newCluster);
+      //     }
+      //   }
+      //
+      //   processed++;
+      //   scanProgress.value = processed / total;
+      //   scanStatus.value =
+      //   'Scanning ${processed} of ${total} photos…';
+      //
+      //   // Yield to UI every 20 items to prevent ANR
+      //   if (processed % 20 == 0) {
+      //     clusters.assignAll(currentClusters);
+      //     await Future.delayed(Duration.zero);
+      //   }
+      // }
 
       // 4. Remove micro-clusters with < 2 photos (likely false detections)
       final filtered =

@@ -6,9 +6,9 @@ import '../../../data/models/media_model.dart';
 import '../../../data/repositories/media_repository.dart';
 
 class GalleryController extends GetxController {
-  // ── Injected dependencies ──────────────────────────────────
-  final MediaRepository _mediaRepo = Get.find<MediaRepository>();
-  final AiPipelineService _aiService = Get.find<AiPipelineService>();
+  // ── Injected dependencies (resolved lazily) ────────────────
+  MediaRepository get _mediaRepo => Get.find<MediaRepository>();
+  //AiPipelineService get _aiService => Get.find<AiPipelineService>();
 
   // ── Observable State ────────────────────────────────────────
   final RxBool isLoading = true.obs;
@@ -146,10 +146,10 @@ class GalleryController extends GetxController {
   }
 
   // ── AI Triggers ─────────────────────────────────────────────
-  Future<void> startFaceGrouping() async {
-    final allItems = timelineGroups.expand((g) => g.items).toList();
-    await _aiService.clusterFaces(allItems);
-  }
+  // Future<void> startFaceGrouping() async {
+  //   final allItems = timelineGroups.expand((g) => g.items).toList();
+  //   await _aiService.clusterFaces(allItems);
+  // }
 
   // ── Private Helpers ─────────────────────────────────────────
   void _removeItemsFromTimeline(Set<String> ids) {
@@ -162,8 +162,11 @@ class GalleryController extends GetxController {
 
   MediaItem? _findItem(String id) {
     for (final group in timelineGroups) {
-      final match = group.items.firstWhere((item) => item.id == id, orElse: () => null as MediaItem);
-      if (match != null) return match;
+      try {
+        return group.items.firstWhere((item) => item.id == id);
+      } catch (_) {
+        // Item not in this group, continue to next
+      }
     }
     return null;
   }

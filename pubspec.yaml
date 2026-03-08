@@ -23,17 +23,15 @@ dependencies:
   cached_network_image: ^3.4.1        # Cache remote images
   flutter_cache_manager: ^3.4.1       # Custom cache manager
   image: ^4.8.0                       # Dart image processing
-  #image_gallery_saver: ^2.0.3         # Save edited images
 
   # ── AI / ML (on-device) ──────────────────────────────────────────
-  google_mlkit_face_detection: ^0.13.2
-  google_mlkit_text_recognition: ^0.15.1
-  google_mlkit_image_labeling: ^0.14.2
+  #google_mlkit_face_detection: ^0.13.2
+  #google_mlkit_text_recognition: ^0.15.1
+  #google_mlkit_image_labeling: ^0.14.2
 
   # ── Editing ──────────────────────────────────────────────────────
   image_editor_plus: ^1.0.8           # Crop, rotate, draw
   video_player: ^2.10.1               # Video playback
-  #video_thumbnail: ^0.5.6             # Generate video thumbnails
   ffmpeg_kit_flutter_new: ^4.1.0      # Video trim, audio mute
 
   # ── Secure Folder ────────────────────────────────────────────────
@@ -71,6 +69,7 @@ dependencies:
   connectivity_plus: ^7.0.0           # Network state detection
   device_info_plus: ^12.3.0           # Device information
   package_info_plus: ^9.0.0           # App version info
+  flutter_local_notifications: ^17.1.0  # In-app notifications
 
 dev_dependencies:
   flutter_test:

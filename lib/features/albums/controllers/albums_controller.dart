@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import '../../../data/repositories/album_repository.dart';
 
 class AlbumsController extends GetxController {
-  final AlbumRepository _albumRepo = Get.find<AlbumRepository>();
+  AlbumRepository get _albumRepo => Get.find<AlbumRepository>();
 
   // ── Observable state ────────────────────────────────────────
 

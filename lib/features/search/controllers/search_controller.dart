@@ -5,7 +5,7 @@ import '../../../data/repositories/media_repository.dart';
 
 // Renamed to avoid conflict with Flutter's built-in SearchController
 class GallerySearchController extends GetxController {
-  final MediaRepository _mediaRepo = Get.find<MediaRepository>();
+  MediaRepository get _mediaRepo => Get.find<MediaRepository>();
 
   // ── Observable state ────────────────────────────────────────
 

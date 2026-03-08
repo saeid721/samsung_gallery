@@ -8,7 +8,7 @@ import '../../../data/models/media_model.dart';
 enum PhotoFilter { none, vivid, warm, cool, bw, fade, chrome }
 
 class EditorController extends GetxController {
-  final AiPipelineService _aiService = Get.find<AiPipelineService>();
+  //AiPipelineService get _aiService => Get.find<AiPipelineService>();
 
   // ── The item being edited ────────────────────────────────────
   final Rx<MediaItem?> mediaItem = Rx(null);
@@ -98,38 +98,38 @@ class EditorController extends GetxController {
 
   // ── AI Tools ─────────────────────────────────────────────────
 
-  Future<void> autoEnhance() async {
-    final item = mediaItem.value;
-    if (item == null || item.isVideo) return;
+  // Future<void> autoEnhance() async {
+  //   final item = mediaItem.value;
+  //   if (item == null || item.isVideo) return;
+  //
+  //   isProcessing.value = true;
+  //   try {
+  //     _pushUndo();
+  //     final enhanced = await _aiService.autoEnhance(item.id);
+  //     editedBytes.value = enhanced;
+  //     _markDirty();
+  //   } finally {
+  //     isProcessing.value = false;
+  //   }
+  // }
 
-    isProcessing.value = true;
-    try {
-      _pushUndo();
-      final enhanced = await _aiService.autoEnhance(item.id);
-      editedBytes.value = enhanced;
-      _markDirty();
-    } finally {
-      isProcessing.value = false;
-    }
-  }
-
-  Future<void> applyBackgroundBlur(double radius) async {
-    final item = mediaItem.value;
-    if (item == null || item.isVideo) return;
-
-    isProcessing.value = true;
-    try {
-      _pushUndo();
-      final blurred = await _aiService.applyBackgroundBlur(
-        imagePath: item.id,
-        blurRadius: radius,
-      );
-      editedBytes.value = blurred;
-      _markDirty();
-    } finally {
-      isProcessing.value = false;
-    }
-  }
+  // Future<void> applyBackgroundBlur(double radius) async {
+  //   final item = mediaItem.value;
+  //   if (item == null || item.isVideo) return;
+  //
+  //   isProcessing.value = true;
+  //   try {
+  //     _pushUndo();
+  //     final blurred = await _aiService.applyBackgroundBlur(
+  //       imagePath: item.id,
+  //       blurRadius: radius,
+  //     );
+  //     editedBytes.value = blurred;
+  //     _markDirty();
+  //   } finally {
+  //     isProcessing.value = false;
+  //   }
+  // }
 
   // ── Video controls ───────────────────────────────────────────
 

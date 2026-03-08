@@ -32,21 +32,28 @@ abstract class AppPages {
   static const editor       = '/editor';
   static const search       = '/search';
   static const secureFolder = '/secure_folder_view-folder';
-  static const memories     = '/memories';
+  static const stories     = '/stories';
   static const people       = '/people';
   static const duplicates   = '/duplicates';
   static const trash        = '/trash';
   static const syncSettings = '/sync-settings';
   static const mapView      = '/map';
+  static const videos      = '/videos';
+  static const favourites      = '/favourites';
+  static const recent      = '/recent';
+  static const suggestions      = '/suggestions';
+  static const locations      = '/locations';
+  static const sharedAlbums      = '/sharedAlbums';
+  static const settings      = '/settings';
 
   // ── Route definitions with lazy bindings ────────────────
   static final routes = [
-    // GetPage(
-    //   name: gallery,
-    //   page: () => const GalleryView(),
-    //   binding: GalleryBinding(),
-    //   transition: Transition.fadeIn,
-    // ),
+    GetPage(
+      name: gallery,
+      page: () => const GalleryView(),
+      binding: GalleryBinding(),
+      transition: Transition.fadeIn,
+    ),
     GetPage(
       name: albums,
       page: () => const AlbumsView(),
@@ -79,7 +86,7 @@ abstract class AppPages {
       transition: Transition.rightToLeft,
     ),
     GetPage(
-      name: memories,
+      name: stories,
       page: () => const StoryView(),
       transition: Transition.fadeIn,
     ),

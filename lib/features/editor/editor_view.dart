@@ -322,8 +322,8 @@ class _AiPanel extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _AiTool(Icons.auto_fix_high,  'Auto\nEnhance', controller.autoEnhance),
-        _AiTool(Icons.blur_on,        'BG\nBlur',      () => controller.applyBackgroundBlur(15)),
+        // _AiTool(Icons.auto_fix_high,  'Auto\nEnhance', controller.autoEnhance),
+        // _AiTool(Icons.blur_on,        'BG\nBlur',      () => controller.applyBackgroundBlur(15)),
         _AiTool(Icons.auto_fix_normal,'Erase\nObject', () {}),
       ],
     );

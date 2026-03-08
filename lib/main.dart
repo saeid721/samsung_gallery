@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -15,40 +14,124 @@ void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
     switch (taskName) {
       case BackgroundTaskService.syncTaskName:
-      // Trigger Google Photos sync in background
         await BackgroundTaskService.runSyncTask(inputData);
         break;
       case BackgroundTaskService.indexTaskName:
-      // Re-index media library changes
         await BackgroundTaskService.runIndexTask(inputData);
         break;
     }
-    return Future.value(true); // true = task completed successfully
+    return Future.value(true);
   });
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Lock to portrait orientation
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // Show loading screen while initializing
+  runApp(const InitializerApp());
+}
 
-  // 2. Load environment config (dev vs prod via --dart-define)
-  await Env.load();
+class InitializerApp extends StatefulWidget {
+  const InitializerApp({super.key});
 
-  // 3. Initialize WorkManager for background tasks
-  await Workmanager().initialize(
-    callbackDispatcher,
-    isInDebugMode: Env.isDev,
-  );
+  @override
+  State<InitializerApp> createState() => _InitializerAppState();
+}
 
-  // 4. Schedule periodic background sync (every 1 hour)
-  await BackgroundTaskService.schedulePeriodicSync();
+class _InitializerAppState extends State<InitializerApp> {
+  bool _isInitialized = false;
+  String _errorMessage = '';
 
-  runApp(const GalleryApp());
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      // 1. Lock to portrait orientation
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+
+      // 2. Load environment config
+      await Env.load();
+
+      // 3. Initialize WorkManager for background tasks
+      try {
+        await Workmanager().initialize(callbackDispatcher);
+        await BackgroundTaskService.schedulePeriodicSync();
+      } catch (e) {
+        print('⚠️ WorkManager initialization failed: $e');
+        // Non-critical error, continue
+      }
+
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_errorMessage.isNotEmpty) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Initialization Error',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_errorMessage, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => _initializeApp(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_isInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading ${AppConfig.appName}...',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const GalleryApp();
+  }
 }
 
 class GalleryApp extends StatelessWidget {
@@ -59,22 +142,48 @@ class GalleryApp extends StatelessWidget {
     return GetMaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
-
-      // ── Theme ─────────────────────────────────────────────
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-
-      // ── Routing ───────────────────────────────────────────
       initialRoute: AppPages.initial,
       getPages: AppPages.routes,
-
-      // ── Dependency Injection ──────────────────────────────
-      // InitialBinding lazily registers all GetX services/repos
       initialBinding: InitialBinding(),
-
-      // ── Localization (extend later for i18n) ──────────────
       locale: const Locale('en', 'US'),
+
+      // Add error handling for routing
+      unknownRoute: GetPage(
+        name: '/404',
+        page: () => const NotFoundPage(),
+        transition: Transition.fadeIn,
+      ),
+    );
+  }
+}
+
+class NotFoundPage extends StatelessWidget {
+  const NotFoundPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              'Page Not Found',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => Get.offAllNamed(AppPages.gallery),
+              child: const Text('Go to Gallery'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

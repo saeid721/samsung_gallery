@@ -1,192 +1,194 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../../../app/routes/app_pages.dart';
 import '../../../app/theme/theme.dart';
 import '../../../data/models/media_model.dart';
 import '../../../shared/widgets/media_thumbnail_widget.dart';
-import '../../../shared/widgets/selection_app_bar.dart';
-import '../../../shared/widgets/timeline_header_widget.dart';
+import '../../../shared/widgets/navigation_menu/app_bottom_nav.dart';
+import '../../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import '../controllers/gallery_controller.dart';
 
-class GalleryView extends GetView<GalleryController> {
+class GalleryView extends StatelessWidget {
   const GalleryView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bottomNavController = Get.find<BottomNavController>();
+    final controller = Get.find<GalleryController>();
+    bottomNavController.markTab(BottomNavTab.pictures);
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Obx(() {
-        if (!controller.hasPermission.value && !controller.isLoading.value) {
-          return _PermissionDeniedWidget(onRetry: controller.refresh);
-        }
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: GetBuilder<GalleryController>(
+          builder: (_) {
+            final selectedCount = controller.selectedIds.length;
+            final allCount = controller.timelineGroups
+                .fold<int>(0, (sum, g) => sum + g.items.length);
 
-        if (controller.isLoading.value && controller.timelineGroups.isEmpty) {
-          return const _LoadingShimmer();
-        }
-
-        // ✅ RefreshIndicator now properly wraps the CustomScrollView
-        return RefreshIndicator(
-          onRefresh: controller.refresh,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            slivers: [
-              Obx(() => controller.isSelectionMode.value
-                  ? const SelectionAppBar()
-                  : _buildMainAppBar()),
-
-              // ✅ Timeline groups with proper spread syntax
-              ...controller.timelineGroups.map((group) => [
-                SliverToBoxAdapter(
-                  child: TimelineHeaderWidget(group: group),
+            return AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+                ],
+              ),
+              actions: [
+                Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.grey),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.grey),
+                      color: AppColors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (value) => _handleAction(value, controller),
+                      itemBuilder: (_) => [
+                        _buildPopupItem(
+                            icon: Icons.favorite_border,
+                            label: 'Add to Favorites',
+                            value: 'favorite',
+                            enabled: selectedCount > 0),
+                        _buildPopupItem(
+                            icon: Icons.folder_outlined,
+                            label: 'Move to Album',
+                            value: 'move',
+                            enabled: selectedCount > 0),
+                        const PopupMenuDivider(),
+                        _buildPopupItem(
+                            icon: Icons.delete_outline,
+                            label: 'Move to Trash',
+                            value: 'trash',
+                            enabled: selectedCount > 0,
+                            isDestructive: true),
+                      ],
+                    ),
+                  ],
                 ),
-                _buildGrid(context, group),
-              ]).expand((widgets) => widgets),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
-          ),
-        );
-      }),
-      bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: _buildFab(),
-    );
-  }
-
-  SliverGrid _buildGrid(BuildContext context, TimelineGroup group) {
-    return SliverGrid(
-      delegate: SliverChildBuilderDelegate(
-            (context, index) {
-          final item = group.items[index];
-          return _MediaCell(item: item, controller: controller);
-        },
-        childCount: group.items.length,
-        addAutomaticKeepAlives: false,
-        addRepaintBoundaries: true,
-        // ✅ Add findChildIndexCallback for better item tracking
-        findChildIndexCallback: (Key key) {
-          if (key is ValueKey<String>) {
-            return group.items.indexWhere((item) => item.id == key.value);
+              ],
+            );
+          },
+        ),
+      ),
+      bottomNavigationBar: const AppBottomNav(),
+      body: GetBuilder<GalleryController>(
+        builder: (_) {
+          if (!controller.hasPermission.value) {
+            return _PermissionDenied(onRetry: controller.refresh);
           }
-          return null;
+
+          if (controller.isLoading.value && controller.timelineGroups.isEmpty) {
+            return const _LoadingShimmer();
+          }
+
+          // Flatten all media items into a single list
+          final allItems = controller.timelineGroups.expand((g) => g.items).toList();
+
+          return RefreshIndicator(
+            onRefresh: controller.refresh,
+            child: GridView.builder(
+              padding: const EdgeInsets.all(2),
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              itemCount: allItems.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+              ),
+              itemBuilder: (context, index) {
+                final item = allItems[index];
+                return _MediaCell(item: item, controller: controller);
+              },
+            ),
+          );
         },
       ),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 2,
-        crossAxisSpacing: 2,
-        childAspectRatio: 1.0,
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool enabled = true,
+    bool isDestructive = false,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      enabled: enabled,
+      child: Row(
+        children: [
+          Icon(icon,
+              color: isDestructive ? Colors.red : Colors.grey.shade700, size: 20),
+          const SizedBox(width: 12),
+          Text(label,
+              style: TextStyle(
+                  color: isDestructive ? Colors.red : Colors.black87,
+                  fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
 
-  Widget _buildMainAppBar() {
-    return SliverAppBar(
-      floating: true,
-      snap: true,
-      backgroundColor: AppColors.background,
-      elevation: 0,
-      title: const Text(
-        'Gallery',
-        style: TextStyle(fontWeight: FontWeight.bold),
+  void _handleAction(String value, GalleryController controller) {
+    switch (value) {
+      case 'favorite':
+        controller.toggleFavoriteSelected();
+        break;
+      case 'move':
+        _showMoveToAlbumDialog(controller);
+        break;
+      case 'trash':
+        _showTrashConfirmation(controller);
+        break;
+    }
+  }
+
+  void _showMoveToAlbumDialog(GalleryController controller) {
+    Get.defaultDialog(
+      title: 'Move to Album',
+      content: const Text('Select destination album'),
+      confirm: ElevatedButton(
+        onPressed: () {
+          // TODO: implement album picker
+          Get.back();
+        },
+        child: const Text('Move'),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search_rounded),
-          onPressed: () => Get.toNamed(AppPages.search),
-        ),
-        IconButton(
-          icon: const Icon(Icons.more_vert),
-          onPressed: _showMoreMenu,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return NavigationBar(
-      destinations: const [
-        NavigationDestination(icon: Icon(Icons.photo_library), label: 'Photos'),
-        NavigationDestination(icon: Icon(Icons.folder), label: 'Albums'),
-        NavigationDestination(icon: Icon(Icons.category), label: 'Categories'),
-        NavigationDestination(icon: Icon(Icons.person), label: 'People'),
-      ],
-      onDestinationSelected: (index) {
-        switch (index) {
-          case 1: Get.toNamed(AppPages.albums); break;
-          case 2: Get.toNamed(AppPages.categories); break;
-          case 3: Get.toNamed(AppPages.people); break;
-          default: break;
-        }
-      },
-    );
-  }
-
-  Widget _buildFab() {
-    return FloatingActionButton.extended(
-      onPressed: () => Get.toNamed(AppPages.memories),
-      icon: const Icon(Icons.auto_awesome),
-      label: const Text('Memories'),
-    );
-  }
-
-  void _showMoreMenu() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.face),
-              title: const Text('Scan Faces'),
-              onTap: () {
-                Get.back();
-                controller.startFaceGrouping();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_sweep),
-              title: const Text('Find Duplicates'),
-              onTap: () {
-                Get.back();
-                Get.toNamed(AppPages.duplicates);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text('Trash Bin'),
-              onTap: () {
-                Get.back();
-                Get.toNamed(AppPages.trash);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock),
-              title: const Text('Secure Folder'),
-              onTap: () {
-                Get.back();
-                Get.toNamed(AppPages.secureFolder);
-              },
-            ),
-          ],
-        ),
+      cancel: TextButton(
+        onPressed: () => Get.back(),
+        child: const Text('Cancel'),
       ),
-      isScrollControlled: true,
+    );
+  }
+
+  void _showTrashConfirmation(GalleryController controller) {
+    Get.defaultDialog(
+      title: 'Move to Trash?',
+      middleText: 'Items will be deleted after 30 days',
+      textConfirm: 'Move',
+      textCancel: 'Cancel',
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.red,
+      onConfirm: controller.trashSelected,
+      onCancel: () => Get.back(),
     );
   }
 }
 
-// ── Individual Grid Cell ────────────────────────────────────
+// ── Media Cell ───────────────────────────────────────────
 class _MediaCell extends StatelessWidget {
   final MediaItem item;
   final GalleryController controller;
-
   const _MediaCell({required this.item, required this.controller});
 
   @override
   Widget build(BuildContext context) {
+    final isSelected = controller.selectedIds.contains(item.id);
     return GestureDetector(
       onTap: () {
         if (controller.isSelectionMode.value) {
@@ -194,56 +196,44 @@ class _MediaCell extends StatelessWidget {
         } else {
           Get.toNamed(AppPages.viewer, arguments: {'mediaItem': item});
         }
+        controller.update();
       },
       onLongPress: () {
         if (!controller.isSelectionMode.value) {
           controller.enterSelectionMode(item.id);
         }
+        controller.update();
       },
-      child: Obx(() {
-        final isSelected = controller.selectedIds.contains(item.id);
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // ✅ Uncommented - actual thumbnail display
-            MediaThumbnailWidget(item: item),
-
-            if (item.type == MediaType.video)
-              _VideoBadge(duration: item.duration),
-
-            if (item.mimeType == 'image/gif')
-              const _GifBadge(),
-
-            if (controller.isSelectionMode.value)
-              _SelectionOverlay(isSelected: isSelected),
-          ],
-        );
-      }),
+      child: Stack(fit: StackFit.expand, children: [
+        MediaThumbnailWidget(item: item),
+        if (item.type == MediaType.video) _VideoBadge(duration: item.duration),
+        if (item.mimeType == 'image/gif') const _GifBadge(),
+        if (controller.isSelectionMode.value) _SelectionOverlay(isSelected: isSelected),
+      ]),
     );
   }
 }
 
+// ── Badges & Overlays ─────────────────────────────────────
 class _VideoBadge extends StatelessWidget {
   final Duration duration;
   const _VideoBadge({required this.duration});
 
   @override
   Widget build(BuildContext context) {
-    final mins = duration.inMinutes.toString().padLeft(2, '0');
-    final secs = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    final m = duration.inMinutes.toString().padLeft(2, '0');
+    final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
     return Align(
       alignment: Alignment.bottomRight,
       child: Container(
         margin: const EdgeInsets.all(4),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
           color: Colors.black54,
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(
-          '$mins:$secs',
-          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500),
-        ),
+        child: Text('$m:$s',
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -253,26 +243,20 @@ class _GifBadge extends StatelessWidget {
   const _GifBadge();
 
   @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomLeft,
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.purpleAccent,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Text('GIF',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold)),
-        ),
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.bottomLeft,
+    child: Container(
+      margin: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.purpleAccent.shade700,
+        borderRadius: BorderRadius.circular(4),
       ),
-    );
-  }
+      child: const Text('GIF',
+          style: TextStyle(
+              color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
+    ),
+  );
 }
 
 class _SelectionOverlay extends StatelessWidget {
@@ -281,111 +265,79 @@ class _SelectionOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final c = Theme.of(context).colorScheme.primary;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       decoration: BoxDecoration(
-        border: isSelected
-            ? Border.all(color: primary, width: 3)
-            : null,
-        color: isSelected
-            ? primary.withOpacity(0.3)
-            : Colors.black.withOpacity(0.1),
+        color: isSelected ? c.withOpacity(0.28) : Colors.black.withOpacity(0.08),
+        border: isSelected ? Border.all(color: c, width: 2.5) : null,
       ),
-      child: isSelected
-          ? Align(
+      child: Align(
         alignment: Alignment.topRight,
         child: Container(
           margin: const EdgeInsets.all(4),
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
-            color: primary,
+            color: isSelected ? c : Colors.black26,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: isSelected ? Colors.white : Colors.white70, width: 2),
           ),
-          child: const Icon(Icons.check, color: Colors.white, size: 16),
-        ),
-      )
-          : Align(
-        alignment: Alignment.topRight,
-        child: Container(
-          margin: const EdgeInsets.all(4),
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white70, width: 2),
-            shape: BoxShape.circle,
-            color: Colors.black26,
-          ),
+          child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
         ),
       ),
     );
   }
 }
 
-class _PermissionDeniedWidget extends StatelessWidget {
+// ── Permission Denied & Loading ───────────────────────────
+class _PermissionDenied extends StatelessWidget {
   final VoidCallback onRetry;
-  const _PermissionDeniedWidget({required this.onRetry});
+  const _PermissionDenied({required this.onRetry});
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.photo_library_outlined, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Allow access to your photos',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Samsung Gallery needs storage permission\nto display your photos.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.lock_open),
-              label: const Text('Grant Permission'),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.photo_library_outlined, size: 80, color: Colors.grey),
+          const SizedBox(height: 20),
+          const Text('Allow access to your photos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          const Text(
+            'Samsung Gallery needs storage permission\nto display your photos.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, height: 1.5),
+          ),
+          const SizedBox(height: 28),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.lock_open_rounded),
+            label: const Text('Grant Permission'),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _LoadingShimmer extends StatelessWidget {
   const _LoadingShimmer();
 
   @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(2),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 2,
-        crossAxisSpacing: 2,
-      ),
-      itemCount: 40,
-      itemBuilder: (_, __) => Container(
-        color: Colors.grey.shade300,
-        child: const ShimmerPlaceholder(), // Consider using shimmer package
-      ),
-    );
-  }
-}
-
-// Optional: Simple shimmer placeholder if not using package
-class ShimmerPlaceholder extends StatelessWidget {
-  const ShimmerPlaceholder({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Container(color: Colors.grey.shade200);
-  }
+  Widget build(BuildContext context) => GridView.builder(
+    padding: EdgeInsets.zero,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 4,
+      mainAxisSpacing: 2,
+      crossAxisSpacing: 2,
+    ),
+    itemCount: 40,
+    itemBuilder: (_, __) => Container(color: Colors.grey.shade200),
+  );
 }

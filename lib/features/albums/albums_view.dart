@@ -1,11 +1,3 @@
-// ============================================================
-// features/albums/views/albums_view.dart
-// ============================================================
-// Displays all photo albums in a 2-column grid.
-// System albums (Camera, Screenshots) appear first.
-// Long-press enters multi-select for rename/delete.
-// FAB opens "New Album" dialog.
-// ============================================================
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -14,6 +6,8 @@ import 'package:photo_manager/photo_manager.dart';
 import '../../app/routes/app_pages.dart';
 import '../../app/theme/theme.dart';
 import '../../data/repositories/album_repository.dart';
+import '../../shared/widgets/navigation_menu/app_bottom_nav.dart';
+import '../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import 'controllers/albums_controller.dart';
 
 class AlbumsView extends GetView<AlbumsController> {
@@ -21,6 +15,7 @@ class AlbumsView extends GetView<AlbumsController> {
 
   @override
   Widget build(BuildContext context) {
+    Get.find<BottomNavController>().markTab(BottomNavTab.albums);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Albums'),
@@ -36,6 +31,7 @@ class AlbumsView extends GetView<AlbumsController> {
           )),
         ],
       ),
+      bottomNavigationBar: const AppBottomNav(),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
