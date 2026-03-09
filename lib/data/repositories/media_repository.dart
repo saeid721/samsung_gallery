@@ -24,6 +24,8 @@ abstract class MediaRepository {
   Future<List<AlbumInfo>> getAlbums();
   Future<List<MediaItem>> getAlbumItems(String albumId, {int page = 0});
 
+  Future<MediaItem?> getItemById(String assetId);
+
   Future<void> trashItems(List<String> assetIds);
   Future<void> deleteFromTrash(List<String> assetIds);
   Future<void> restoreFromTrash(List<String> assetIds);
@@ -129,6 +131,22 @@ class MediaRepositoryImpl implements MediaRepository {
     await path.getAssetListPaged(page: page, size: 80);
 
     return Future.wait(assets.map(_toMediaItem));
+  }
+
+  @override
+  Future<MediaItem?> getItemById(String assetId) async {
+    // Check cache first
+    if (_cache.containsKey(assetId)) {
+      return _cache[assetId];
+    }
+
+    // Get asset from photo manager
+    final asset = await _indexService.getAsset(assetId);
+    if (asset == null) return null;
+
+    // Convert to MediaItem
+    final item = await _toMediaItem(asset);
+    return item;
   }
 
   /// ─────────────────────────────────────────────────────────

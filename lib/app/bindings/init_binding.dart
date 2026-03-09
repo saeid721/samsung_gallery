@@ -5,16 +5,19 @@ import '../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import '../../core/services/ai_pipeline_service.dart';
 import '../../core/services/background_task_service.dart';
 import '../../core/services/exif_service.dart';
+import '../../core/services/face_recognition_service.dart';
 import '../../core/services/media_index_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/services/thumbnail_cache_service.dart';
 
 // Repositories
 import '../../data/repositories/album_repository.dart';
-import '../../data/repositories/face_recognition_service.dart';
 import '../../data/repositories/media_repository.dart';
 import '../../data/repositories/secure_media_repository.dart';
 import '../../data/repositories/sync_repository.dart';
+
+// Controllers
+import '../../features/story/controllers/story_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -26,6 +29,8 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => BottomNavController(), fenix: true);
     Get.lazyPut(() => BottomNavController(), fenix: true);
 
+    // ── Feature Controllers ────────────────────────────────
+    Get.lazyPut<StoryController>(() => StoryController(), fenix: true);
 
     // ── Core Services (always-alive singletons) ─────────────
     Get.lazyPut(() => SecureStorageService(), fenix: true);
@@ -40,17 +45,10 @@ class InitialBinding extends Bindings {
     Get.lazyPut<SecureMediaRepository>(() => SecureMediaRepositoryImpl(secureStorage: Get.find<SecureStorageService>()), fenix: true);
 
     // ── AI Services ─────────────────────────────────────────
-    // Get.lazyPut<FaceRecognitionService>(
-    //       () => FaceRecognitionService(),
-    //   fenix: true,
-    // );
-    //
-    // Get.lazyPut<AiPipelineService>(
-    //       () => AiPipelineService(
-    //     faceService: Get.find<FaceRecognitionService>(),
-    //   ),
-    //   fenix: true,
-    // );
+    Get.lazyPut<FaceRecognitionService>(() => FaceRecognitionService(), fenix: true);
+
+    Get.lazyPut<AiPipelineService>(() => AiPipelineService(faceService: Get.find<FaceRecognitionService>()), fenix: true);
+
 
     // ── Background Task Service ──────────────────────────────
     // Get.lazyPut<BackgroundTaskService>(

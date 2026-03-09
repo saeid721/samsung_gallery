@@ -1,29 +1,12 @@
-// ============================================================
-// core/services/media_index_service.dart
-// ============================================================
-// Manages the in-memory and cached index of all media on device.
-// All heavy lifting runs in background isolates (compute()).
-//
-// INDEX STRATEGY FOR 50K+ PHOTOS:
-//   • Never load all assets into memory at once
-//   • Use photo_manager's paginated API (80 items/page)
-//   • Store metadata in a flat Dart Map (fast O(1) lookup)
-//   • Thumbnails cached to disk via ThumbnailCacheService
-//   • Perceptual hashes computed lazily (background, low priority)
-// ============================================================
-
 import 'dart:async';
-import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'thumbnail_cache_service.dart';
-import '../config/app_config.dart';
 
 class MediaIndexService {
   final ThumbnailCacheService _thumbnailCache;
@@ -186,6 +169,15 @@ class MediaIndexService {
         .where((e) => e.value.isBefore(threshold))
         .map((e) => e.key)
         .toList();
+  }
+
+  /// Get the trash index (read-only)
+  Map<String, DateTime> get trashIndex => Map.unmodifiable(_trashIndex);
+
+  /// Remove item from trash index
+  Future<void> removeFromTrash(String assetId) async {
+    _trashIndex.remove(assetId);
+    await _saveTrashIndex();
   }
 
   // ----------------------------------------------------------
