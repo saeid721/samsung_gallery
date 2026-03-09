@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../app/routes/app_pages.dart';
 import '../../../app/theme/theme.dart';
-import '../../../data/models/media_model.dart';
-import '../../../shared/widgets/media_thumbnail_widget.dart';
 import '../../../shared/widgets/navigation_menu/app_bottom_nav.dart';
 import '../../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import '../controllers/gallery_controller.dart';
@@ -74,6 +72,13 @@ class GalleryView extends StatelessWidget {
                           icon: Icons.delete_outline,
                           label: 'Move to Trash',
                           value: 'trash',
+                          enabled: selectedCount > 0,
+                          isDestructive: true),
+                      const PopupMenuDivider(),
+                      _buildPopupItem(
+                          icon: Icons.share_outlined,
+                          label: 'Share',
+                          value: 'share',
                           enabled: selectedCount > 0,
                           isDestructive: true),
                     ],
@@ -226,115 +231,7 @@ class GalleryView extends StatelessWidget {
   }
 }
 
-// ── Media Cell ───────────────────────────────────────────
-class _MediaCell extends StatelessWidget {
-  final MediaItem item;
-  final GalleryController controller;
-  const _MediaCell({required this.item, required this.controller});
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (controller.isSelectionMode.value) {
-          controller.toggleSelection(item.id);
-        } else {
-          Get.toNamed(AppPages.viewer, arguments: {'mediaItem': item});
-        }
-      },
-      onLongPress: () {
-        if (!controller.isSelectionMode.value) {
-          controller.enterSelectionMode(item.id);
-        }
-      },
-      child: Obx(() {
-        final isSelected = controller.selectedIds.contains(item.id);
-        return Stack(fit: StackFit.expand, children: [
-          MediaThumbnailWidget(item: item),
-          if (item.type == MediaType.video) _VideoBadge(duration: item.duration),
-          if (item.mimeType == 'image/gif') const _GifBadge(),
-          if (controller.isSelectionMode.value) _SelectionOverlay(isSelected: isSelected),
-        ]);
-      }),
-    );
-  }
-}
-
-// ── Badges & Overlays ─────────────────────────────────────
-class _VideoBadge extends StatelessWidget {
-  final Duration duration;
-  const _VideoBadge({required this.duration});
-
-  @override
-  Widget build(BuildContext context) {
-    final m = duration.inMinutes.toString().padLeft(2, '0');
-    final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    return Align(
-      alignment: Alignment.bottomRight,
-      child: Container(
-        margin: const EdgeInsets.all(4),
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text('$m:$s',
-            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
-      ),
-    );
-  }
-}
-
-class _GifBadge extends StatelessWidget {
-  const _GifBadge();
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.bottomLeft,
-    child: Container(
-      margin: const EdgeInsets.all(4),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.purpleAccent.shade700,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Text('GIF',
-          style: TextStyle(
-              color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-    ),
-  );
-}
-
-class _SelectionOverlay extends StatelessWidget {
-  final bool isSelected;
-  const _SelectionOverlay({required this.isSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme.primary;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      decoration: BoxDecoration(
-        color: isSelected ? c.withOpacity(0.28) : Colors.black.withOpacity(0.08),
-        border: isSelected ? Border.all(color: c, width: 2.5) : null,
-      ),
-      child: Align(
-        alignment: Alignment.topRight,
-        child: Container(
-          margin: const EdgeInsets.all(4),
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: isSelected ? c : Colors.black26,
-            shape: BoxShape.circle,
-            border: Border.all(color: isSelected ? Colors.white : Colors.white70, width: 2),
-          ),
-          child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
-        ),
-      ),
-    );
-  }
-}
 
 // ── Permission Denied & Loading ───────────────────────────
 class _PermissionDenied extends StatelessWidget {

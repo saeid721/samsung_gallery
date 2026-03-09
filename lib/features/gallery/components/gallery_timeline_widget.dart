@@ -23,12 +23,15 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:video_player/video_player.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../../app/routes/app_pages.dart';
 import '../../../data/models/media_model.dart' hide TimelineGroup;
 import '../../../data/models/timeline_group.dart';
 import '../controllers/gallery_controller.dart';
 import '../controllers/gallery_grid_controller.dart';
+import '../controllers/video_thumbnail_manager.dart';
 
 class GalleryTimelineWidget extends StatelessWidget {
   final List<TimelineGroup>     groups;
@@ -359,6 +362,15 @@ class _MediaCell extends StatelessWidget {
             // ── Thumbnail ──────────────────────────────
             _Thumbnail(id: item.id, columns: columns),
 
+            // ── Video play overlay ──────────────────────
+            if (item.isVideo)
+              Positioned.fill(
+                child: _VideoPlayButton(
+                  duration: item.duration,
+                  columns: columns,
+                ),
+              ),
+
             // ── Video duration badge ───────────────────
             if (item.isVideo)
               _VideoBadge(
@@ -389,51 +401,102 @@ class _MediaCell extends StatelessWidget {
 }
 
 // ── Thumbnail ─────────────────────────────────────────────────
-class _Thumbnail extends StatelessWidget {
+class _Thumbnail extends StatefulWidget {
   final String id;
   final int    columns;
   const _Thumbnail({required this.id, required this.columns});
 
+  @override
+  State<_Thumbnail> createState() => _ThumbnailState();
+}
+
+class _ThumbnailState extends State<_Thumbnail> {
+  VideoPlayerController? _videoController;
+  bool _isVideo = false;
+  final VideoThumbnailManager _videoManager = Get.find<VideoThumbnailManager>();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeThumbnail();
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeThumbnail() async {
+    final asset = await AssetEntity.fromId(widget.id);
+    if (asset != null && asset.type == AssetType.video) {
+      _isVideo = true;
+      _videoController = _videoManager.getController(
+        widget.id,
+        () async => (await asset.originFile)?.path,
+      );
+    }
+  }
+
   // Thumb resolution: smaller at high column counts saves memory
   ThumbnailSize get _thumbSize {
-    if (columns >= 10) return const ThumbnailSize(80,  80);
-    if (columns >= 6)  return const ThumbnailSize(150, 150);
-    if (columns >= 3)  return const ThumbnailSize(240, 240);
+    if (widget.columns >= 10) return const ThumbnailSize(80,  80);
+    if (widget.columns >= 6)  return const ThumbnailSize(150, 150);
+    if (widget.columns >= 3)  return const ThumbnailSize(240, 240);
     return               const ThumbnailSize(480, 480);
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Uint8List?>(
-      future: _load(),
-      builder: (_, snap) {
-        if (snap.hasData && snap.data != null) {
-          return Image.memory(
-            snap.data!,
-            fit:         BoxFit.cover,
-            cacheWidth:  _thumbSize.width.toInt(),
-            cacheHeight: _thumbSize.height.toInt(),
-            // Fade in
-            frameBuilder: (_, child, frame, wasSynchronous) {
-              if (wasSynchronous || frame != null) return child;
-              return AnimatedOpacity(
-                opacity:  frame == null ? 0 : 1,
-                duration: const Duration(milliseconds: 200),
-                child:    child,
-              );
-            },
-          );
+    return VisibilityDetector(
+      key: Key('thumbnail_${widget.id}'),
+      onVisibilityChanged: (info) {
+        if (_isVideo && _videoController != null) {
+          if (info.visibleFraction > 0.5) {
+            // Thumbnail is visible, activate video playback
+            _videoManager.activateVideo(widget.id);
+          } else {
+            // Thumbnail is not visible, deactivate video playback
+            _videoManager.deactivateVideo(widget.id);
+          }
         }
-        // Placeholder
-        return Container(
-          color: Colors.grey.shade200,
-        );
       },
+      child: _isVideo && _videoController != null && _videoController!.value.isInitialized
+          ? AspectRatio(
+              aspectRatio: _videoController!.value.aspectRatio,
+              child: VideoPlayer(_videoController!),
+            )
+          : FutureBuilder<Uint8List?>(
+              future: _loadStaticThumbnail(),
+              builder: (_, snap) {
+                if (snap.hasData && snap.data != null) {
+                  return Image.memory(
+                    snap.data!,
+                    fit:         BoxFit.cover,
+                    cacheWidth:  _thumbSize.width.toInt(),
+                    cacheHeight: _thumbSize.height.toInt(),
+                    // Fade in
+                    frameBuilder: (_, child, frame, wasSynchronous) {
+                      if (wasSynchronous || frame != null) return child;
+                      return AnimatedOpacity(
+                        opacity:  frame == null ? 0 : 1,
+                        duration: const Duration(milliseconds: 200),
+                        child:    child,
+                      );
+                    },
+                  );
+                }
+                // Placeholder
+                return Container(
+                  color: Colors.grey.shade200,
+                );
+              },
+            ),
     );
   }
 
-  Future<Uint8List?> _load() async {
-    final asset = await AssetEntity.fromId(id);
+  Future<Uint8List?> _loadStaticThumbnail() async {
+    final asset = await AssetEntity.fromId(widget.id);
     return asset?.thumbnailDataWithSize(
       _thumbSize,
       format:  ThumbnailFormat.jpeg,
@@ -600,6 +663,32 @@ class _ColumnHud extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Video play button ─────────────────────────────────────────
+class _VideoPlayButton extends StatelessWidget {
+  final Duration duration;
+  final int      columns;
+  const _VideoPlayButton({required this.duration, required this.columns});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = columns >= 8 ? 36.0 : (columns >= 4 ? 48.0 : 60.0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.play_arrow_rounded,
+          color: Colors.white,
+          size: size * 0.6,
+        ),
       ),
     );
   }

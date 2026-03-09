@@ -33,6 +33,7 @@ dependencies:
   # ── Editing ──────────────────────────────────────────────────────
   image_editor_plus: ^1.0.8           # Crop, rotate, draw
   video_player: ^2.10.1               # Video playback
+  visibility_detector: ^0.4.0+2       # Detect widget visibility
   ffmpeg_kit_flutter_new: ^4.1.0      # Video trim, audio mute
 
   # ── Secure Folder ────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import '../../../data/models/media_model.dart' hide TimelineGroup;
 import '../../../data/models/timeline_group.dart';
 import '../../../data/repositories/media_repository.dart';
 import '../../../data/repositories/album_repository.dart';
+import 'date_filter_controller.dart';
 
 class GalleryController extends GetxController {
   // ── Injected dependencies (resolved lazily) ────────────────
@@ -138,6 +139,7 @@ class GalleryController extends GetxController {
   }
 
   // ── Public Actions ───────────────────────────────────────────
+  @override
   Future<void> refresh() async {
     isLoading.value = true;
     await _initialize();
@@ -245,5 +247,17 @@ class GalleryController extends GetxController {
       }
     }
     return null;
+  }
+
+  // ── Date Filter Support ─────────────────────────────────
+  void applyDateFilter(DateFilterType filterType) {
+    try {
+      final dateFilterController = Get.find<DateFilterController>();
+      // Convert RxList to List for the filter method
+      dateFilterController.applyFilter(timelineGroups.toList());
+      // UI will rebuild automatically due to Obx observation
+    } catch (e) {
+      debugPrint('Error applying date filter: $e');
+    }
   }
 }
