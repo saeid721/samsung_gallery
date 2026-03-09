@@ -1,7 +1,7 @@
-
 import 'package:get/get.dart';
 
 import '../../../features/gallery/controllers/gallery_controller.dart';
+import '../../../features/gallery/controllers/gallery_grid_controller.dart';
 import '../../../features/albums/controllers/albums_controller.dart';
 
 class GalleryBinding extends Bindings {
@@ -11,6 +11,12 @@ class GalleryBinding extends Bindings {
     // fenix: true — recreate if disposed while navigating away.
     Get.lazyPut<GalleryController>(
           () => GalleryController(),
+      fenix: true,
+    );
+
+    // GalleryGridController manages grid columns and pinch-to-zoom
+    Get.lazyPut<GalleryGridController>(
+          () => GalleryGridController(),
       fenix: true,
     );
 

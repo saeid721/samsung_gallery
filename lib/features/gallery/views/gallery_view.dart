@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../../app/routes/app_pages.dart';
 import '../../../app/theme/theme.dart';
 import '../../../data/models/media_model.dart';
@@ -8,6 +7,8 @@ import '../../../shared/widgets/media_thumbnail_widget.dart';
 import '../../../shared/widgets/navigation_menu/app_bottom_nav.dart';
 import '../../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import '../controllers/gallery_controller.dart';
+import '../controllers/gallery_grid_controller.dart';
+import '../components/gallery_timeline_widget.dart';
 
 class GalleryView extends StatelessWidget {
   const GalleryView({super.key});
@@ -145,20 +146,10 @@ class GalleryView extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: controller.refresh,
-          child: GridView.builder(
-            padding: const EdgeInsets.all(2),
-            physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics()),
-            itemCount: allItems.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
-            ),
-            itemBuilder: (context, index) {
-              final item = allItems[index];
-              return _MediaCell(item: item, controller: controller);
-            },
+          child: GalleryTimelineWidget(
+            groups: controller.timelineGroups.toList(),
+            controller: controller,
+            gridCtrl: Get.find<GalleryGridController>(),
           ),
         );
       }),
