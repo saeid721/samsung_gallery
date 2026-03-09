@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../core/services/ai_pipeline_service.dart';
-import '../../../data/models/media_model.dart';
+import '../../../data/models/media_model.dart' hide TimelineGroup;
+import '../../../data/models/timeline_group.dart';
 import '../../../data/repositories/media_repository.dart';
+import '../../../data/repositories/album_repository.dart';
 
 class GalleryController extends GetxController {
   // ── Injected dependencies (resolved lazily) ────────────────
   MediaRepository get _mediaRepo => Get.find<MediaRepository>();
+  AlbumRepository get _albumRepo => Get.find<AlbumRepository>();
   //AiPipelineService get _aiService => Get.find<AiPipelineService>();
 
   // ── Observable State ────────────────────────────────────────
@@ -19,6 +21,10 @@ class GalleryController extends GetxController {
   final RxInt scrollOffset = 0.obs;
   final RxString errorMessage = ''.obs;
 
+  // Album filtering support
+  final RxString currentAlbumId = ''.obs;
+  final RxString currentAlbumName = ''.obs;
+
   // ── Lifecycle ────────────────────────────────────────────────
   StreamSubscription? _timelineSubscription;
   List<String>? _lastTrashedIds; // Moved here for proper scope
@@ -26,6 +32,12 @@ class GalleryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Get album ID from route arguments if present
+    final args = Get.arguments as Map<String, dynamic>?;
+    if (args != null && args.containsKey('albumId')) {
+      currentAlbumId.value = args['albumId'] as String;
+      currentAlbumName.value = args['albumName'] as String? ?? 'Album';
+    }
     _initialize();
   }
 
@@ -48,8 +60,36 @@ class GalleryController extends GetxController {
     }
 
     _timelineSubscription?.cancel(); // Cancel previous if any
+
+    // If viewing a specific album, load only its items
+    if (currentAlbumId.value.isNotEmpty) {
+      await _loadAlbumMedia();
+    } else {
+      _loadTimelineStream();
+    }
+  }
+
+  Future<void> _loadAlbumMedia() async {
+    try {
+      final items = await _albumRepo.getAlbumItems(currentAlbumId.value);
+      if (items.isNotEmpty) {
+        // Sort items by date descending
+        items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        // Group items by date
+        final groupedItems = _groupItemsByDate(items);
+        timelineGroups.assignAll(groupedItems);
+      }
+      isLoading.value = false;
+    } catch (e) {
+      errorMessage.value = 'Failed to load album media: $e';
+      isLoading.value = false;
+    }
+  }
+
+  void _loadTimelineStream() {
     _timelineSubscription = _mediaRepo.getTimelineStream().listen(
-          (groups) {
+      (groups) {
         // Cast to ensure type compatibility
         timelineGroups.assignAll(groups as Iterable<TimelineGroup>);
         isLoading.value = false;
@@ -59,6 +99,42 @@ class GalleryController extends GetxController {
         isLoading.value = false;
       },
     );
+  }
+
+  List<TimelineGroup> _groupItemsByDate(List<MediaItem> items) {
+    final grouped = <String, List<MediaItem>>{};
+
+    for (final item in items) {
+      final label = _formatDate(item.createdAt);
+      if (!grouped.containsKey(label)) {
+        grouped[label] = [];
+      }
+      grouped[label]!.add(item);
+    }
+
+    // Sort by date descending
+    final sortedLabels = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    return sortedLabels.map((label) {
+      return TimelineGroup(
+        label: label,
+        items: grouped[label] ?? [],
+      );
+    }).toList();
+  }
+
+  String _formatDate(DateTime date) {
+    final today = DateTime.now();
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (dateOnly == DateTime(today.year, today.month, today.day)) {
+      return 'Today';
+    } else if (dateOnly == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
   }
 
   // ── Public Actions ───────────────────────────────────────────
@@ -92,7 +168,7 @@ class GalleryController extends GetxController {
     final allIds = timelineGroups
         .expand((g) => g.items)
         .map((item) => item.id)
-        .toSet();
+        .toList();
     selectedIds.assignAll(allIds);
   }
 

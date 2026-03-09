@@ -10,6 +10,7 @@ import '../../data/repositories/album_repository.dart';
 import '../../shared/widgets/navigation_menu/app_bottom_nav.dart';
 import '../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import 'controllers/albums_controller.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 
 class AlbumsView extends GetView<AlbumsController> {
   const AlbumsView({super.key});
@@ -20,6 +21,7 @@ class AlbumsView extends GetView<AlbumsController> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Albums'),
+        elevation: 2,
         actions: [
           Obx(() => controller.isSelectionMode.value
               ? TextButton(
@@ -38,6 +40,34 @@ class AlbumsView extends GetView<AlbumsController> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Show error if any
+        if (controller.errorMessage.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading albums',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  controller.errorMessage.value,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.refresh,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
         if (controller.albums.isEmpty) {
           return Center(
             child: Column(
@@ -53,6 +83,11 @@ class AlbumsView extends GetView<AlbumsController> {
                 Text(
                   'Create your first album to get started',
                   style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.refresh,
+                  child: const Text('Refresh'),
                 ),
               ],
             ),
@@ -162,7 +197,7 @@ class _AlbumCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -193,7 +228,7 @@ class _AlbumCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primary
-                              : Colors.white.withOpacity(0.8),
+                              : Colors.white.withValues(alpha: 0.8),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isSelected ? AppColors.primary : Colors.grey,
@@ -259,7 +294,7 @@ class _AssetThumbnail extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasError) {
+        if (snapshot.hasError || snapshot.data == null) {
           return Container(
             color: Colors.grey.shade300,
             child: Icon(Icons.broken_image, color: Colors.grey.shade600),
@@ -285,16 +320,20 @@ class _AssetThumbnail extends StatelessWidget {
   Future<Uint8List?> _loadThumb() async {
     try {
       final asset = await AssetEntity.fromId(assetId);
-      if (asset == null) return null;
+      if (asset == null) {
+        if (kDebugMode) print('Asset not found: $assetId');
+        return null;
+      }
 
       // Load thumbnail with appropriate size for album covers
       final thumbnail = await asset.thumbnailDataWithSize(
         const ThumbnailSize(300, 300),
         format: ThumbnailFormat.jpeg,
+        quality: 85,
       );
       return thumbnail;
     } catch (e) {
-      debugPrint('Error loading thumbnail for $assetId: $e');
+      if (kDebugMode) print('Error loading thumbnail for $assetId: $e');
       return null;
     }
   }

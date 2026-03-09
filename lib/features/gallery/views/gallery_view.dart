@@ -27,6 +27,11 @@ class GalleryView extends StatelessWidget {
           final allCount = controller.timelineGroups
               .fold<int>(0, (sum, g) => sum + g.items.length);
 
+          // Show album name if viewing specific album
+          final title = controller.currentAlbumName.value.isNotEmpty
+              ? controller.currentAlbumName.value
+              : 'Gallery';
+
           return AppBar(
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,7 +39,7 @@ class GalleryView extends StatelessWidget {
                 if (controller.isSelectionMode.value)
                   Text('$selectedCount / $allCount selected', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16))
                 else
-                  const Text('Gallery', style: TextStyle(fontWeight: FontWeight.w700)),
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
               ],
             ),
             actions: [
@@ -88,17 +93,51 @@ class GalleryView extends StatelessWidget {
           return const _LoadingShimmer();
         }
 
+        // Show error if any
+        if (controller.errorMessage.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading photos',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  controller.errorMessage.value,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.refresh,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
         // Flatten all media items into a single list
         final allItems = controller.timelineGroups.expand((g) => g.items).toList();
 
         if (allItems.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text('No photos found', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 16),
+                const Text('No photos found', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.refresh,
+                  child: const Text('Refresh'),
+                ),
               ],
             ),
           );
