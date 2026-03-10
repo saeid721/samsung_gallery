@@ -1,5 +1,6 @@
 // features/gallery/models/media_item.dart
 import 'package:get/get.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 enum MediaType { image, video, gif }
 
@@ -19,6 +20,7 @@ class MediaItem {
   final RxBool isFavorite;       // Reactive — UI rebuilds on change
   final bool isSecure;
   final List<String> tags;
+  final AssetEntity? entity;      // Optional but highly recommended for performance
 
   MediaItem({
     required this.id,
@@ -36,6 +38,7 @@ class MediaItem {
     required this.isFavorite,
     this.isSecure = false,
     this.tags = const [],
+    this.entity,
   });
 
   bool get hasLocation => latitude != null && longitude != null;

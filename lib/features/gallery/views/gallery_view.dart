@@ -6,7 +6,7 @@ import '../../../shared/widgets/navigation_menu/app_bottom_nav.dart';
 import '../../../shared/widgets/navigation_menu/bottom_nav_controller.dart';
 import '../controllers/gallery_controller.dart';
 import '../controllers/gallery_grid_controller.dart';
-import '../components/gallery_timeline_widget.dart';
+import '../widgets/gallery_timeline_widget.dart';
 
 class GalleryView extends StatelessWidget {
   const GalleryView({super.key});
@@ -58,27 +58,31 @@ class GalleryView extends StatelessWidget {
                     onSelected: (value) => _handleAction(value, controller),
                     itemBuilder: (_) => [
                       _buildPopupItem(
-                          icon: Icons.favorite_border,
-                          label: 'Add to Favorites',
-                          value: 'favorite',
+                          icon: Icons.edit_outlined,
+                          label: 'Edit',
+                          value: 'edit',
                           enabled: selectedCount > 0),
                       _buildPopupItem(
-                          icon: Icons.folder_outlined,
-                          label: 'Move to Album',
-                          value: 'move',
+                          icon: Icons.select_all,
+                          label: 'Select All',
+                          value: 'select_all',
                           enabled: selectedCount > 0),
-                      const PopupMenuDivider(),
                       _buildPopupItem(
-                          icon: Icons.delete_outline,
-                          label: 'Move to Trash',
-                          value: 'trash',
+                          icon: Icons.add_circle_outline,
+                          label: 'Create',
+                          value: 'create',
                           enabled: selectedCount > 0,
                           isDestructive: true),
-                      const PopupMenuDivider(),
                       _buildPopupItem(
-                          icon: Icons.share_outlined,
-                          label: 'Share',
-                          value: 'share',
+                          icon: Icons.group_work_outlined,
+                          label: 'Group Similar Images',
+                          value: 'group_similar_image',
+                          enabled: selectedCount > 0,
+                          isDestructive: true),
+                      _buildPopupItem(
+                          icon: Icons.slideshow,
+                          label: 'Start Slideshow',
+                          value: 'start_slideshow',
                           enabled: selectedCount > 0,
                           isDestructive: true),
                     ],

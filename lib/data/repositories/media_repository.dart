@@ -219,7 +219,6 @@ class MediaRepositoryImpl implements MediaRepository {
   /// DUPLICATES
   /// ─────────────────────────────────────────────────────────
   @override
-  @override
   Stream<List<DuplicateGroup>> findDuplicates() async* {
     final stream = _indexService.streamDuplicateGroups();
 
@@ -272,10 +271,11 @@ class MediaRepositoryImpl implements MediaRepository {
       modifiedAt: asset.modifiedDateTime,
       albumName: asset.relativePath ?? '',
       mimeType: asset.mimeType ?? '',
-      size: asset.size.width.toInt() ?? 0,
+      size: asset.size.width.toInt(),
       latitude: exif?.latitude,
       longitude: exif?.longitude,
       isFavorite: RxBool(asset.isFavorite),
+      entity: asset, // Store the asset entity for fast thumbnail loading
     );
 
     _cache[item.id] = item;

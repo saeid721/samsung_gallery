@@ -20,6 +20,7 @@ import '../bindings/gallery_binding.dart';
 import '../bindings/search_binding.dart';
 import '../bindings/secure_folder_binding.dart';
 import '../bindings/viewer_binding.dart';
+import '../bindings/trash_binding.dart';
 
 abstract class AppPages {
   static const initial = gallery;
@@ -103,6 +104,7 @@ abstract class AppPages {
     GetPage(
       name: trash,
       page: () => const TrashView(),
+      binding: TrashBinding(),
       transition: Transition.rightToLeft,
     ),
     GetPage(
