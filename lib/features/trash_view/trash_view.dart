@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:photo_manager/photo_manager.dart';
 import '../../app/theme/theme.dart';
 import '../../data/models/media_model.dart';
+import '../../shared/widgets/global_progress_hub.dart';
 import 'controllers/trash_controller.dart';
 
 class TrashView extends StatelessWidget {
@@ -44,7 +45,7 @@ class _TrashNormalScreen extends StatelessWidget {
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: _ProgressHUD(
+        child: ProgressHUD(
           inAsyncCall: c.isLoading,
           child: Container(
             height: sz.height,
@@ -697,34 +698,6 @@ class _TrashCell extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PROGRESS HUD (loading overlay — like ProgressHUD package)
-// ══════════════════════════════════════════════════════════════
-
-class _ProgressHUD extends StatelessWidget {
-  final bool inAsyncCall;
-  final Widget child;
-  const _ProgressHUD(
-      {required this.inAsyncCall, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        if (inAsyncCall)
-          Container(
-            color: Colors.black,
-            child: const Center(
-              child: CircularProgressIndicator(
-                  color: Colors.white, strokeWidth: 2),
-            ),
-          ),
-      ],
     );
   }
 }
